@@ -276,11 +276,13 @@ jobs:
 
       # --------------------------------------------------------------------
       # 13. Create GitHub Release
+      # FIX: Gunakan prefix "michiko-" agar tag tidak bentrok dengan
+      #      workflow kernel lain (misal SuperPotato) yang pakai tag "v{DATE}"
       # --------------------------------------------------------------------
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.release_tag || format('v{0}', env.DATE_TAG) }}
+          tag_name: ${{ github.event.inputs.release_tag || format('michiko-v{0}', env.DATE_TAG) }}
           name: "Michiko-Kernel ${{ env.DATE_TAG }}"
           body_path: release_notes.md
           files: ${{ env.ZIP_PATH }}
@@ -291,6 +293,7 @@ jobs:
 
       # --------------------------------------------------------------------
       # 14. Send to Telegram
+      # FIX: Hapus baris "Size" dari caption agar tidak tampil di grup
       # --------------------------------------------------------------------
       - name: Send to Telegram
         if: ${{ github.event.inputs.send_telegram != 'false' }}
@@ -299,7 +302,7 @@ jobs:
         run: |
           RELEASE_TAG="${{ github.event.inputs.release_tag }}"
           if [[ -z "$RELEASE_TAG" ]]; then
-            RELEASE_TAG="v${DATE_TAG}"
+            RELEASE_TAG="michiko-v${DATE_TAG}"
           fi
 
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${RELEASE_TAG}"
@@ -319,12 +322,10 @@ jobs:
           caption = (
               "Michiko Kernel - Build {DATE_TAG}\n"
               "Device  : {TARGET_DEVICE}\n"
-              "Size    : {ZIP_SIZE}\n"
               "Release : {RELEASE_URL}"
           ).format(
               DATE_TAG      = os.environ["DATE_TAG"],
               TARGET_DEVICE = os.environ["TARGET_DEVICE"],
-              ZIP_SIZE      = os.environ["ZIP_SIZE"],
               RELEASE_URL   = "${RELEASE_URL}",
           )
 
