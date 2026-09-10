@@ -1,0 +1,218 @@
+name: Michiko Kernel Build
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Custom release tag (leave empty for auto)"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    name: Build Kernel
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
+
+    env:
+      ARCH: arm64
+      KBUILD_BUILD_HOST: standalone
+      KBUILD_BUILD_USER: xyz
+      USE_CCACHE: 1
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CLANG_DIR: ${{ github.workspace }}/foxe-clang/install
+      GCC32_DIR: ${{ github.workspace }}/fox-gcc32
+      AK3_DIR: ${{ github.workspace }}/AnyKernel3
+      KERNEL_DIR: ${{ github.workspace }}
+
+    steps:
+      # -------------------------------------------------------
+      # Checkout source kernel dari repo org FoxMiko-Labs
+      # -------------------------------------------------------
+      - name: Checkout kernel source from org repo
+        uses: actions/checkout@v4
+        with:
+          repository: FoxMiko-Labs/kernel_xiaomi_sm6250
+          ref: lineage-23.2
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 5
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            bc bison build-essential ca-certificates cpio curl \
+            flex git libelf-dev libssl-dev lld llvm make \
+            python3 unzip xz-utils zstd
+
+      # -------------------------------------------------------
+      # Toolchain cache — FoxeClang
+      # -------------------------------------------------------
+      - name: Restore FoxeClang cache
+        id: cache-clang
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CLANG_DIR }}
+          key: foxe-clang-v24.0-20260822
+
+      - name: Download and extract FoxeClang
+        if: steps.cache-clang.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$CLANG_DIR"
+          echo "Downloading FoxeClang..."
+          curl -Lo foxe-clang.tar.zst \
+            "https://github.com/FoxMiko-Labs/FoxeClang/releases/download/v23.0-20260822/FoxeClang-23.0-20260822.tar.zst"
+          tar --zstd -xf foxe-clang.tar.zst -C "$CLANG_DIR" --strip-components=1
+          rm -f foxe-clang.tar.zst
+          echo "FoxeClang bin contents:"
+          ls "$CLANG_DIR/bin/" | head -10
+
+      - name: Debug FoxeClang structure
+        run: |
+          echo "=== Root foxe-clang ==="
+          find "${{ github.workspace }}/foxe-clang" -maxdepth 4 -type d
+          echo ""
+          echo "=== Looking for clang binary ==="
+          find "${{ github.workspace }}/foxe-clang" -name "clang" -type f 2>/dev/null
+
+      # -------------------------------------------------------
+      # Toolchain cache — FoxGCC ARM32
+      # -------------------------------------------------------
+      - name: Restore FoxGCC ARM32 cache
+        id: cache-gcc32
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.GCC32_DIR }}
+          key: fox-gcc32-v17.0-20260822
+
+      - name: Download and extract FoxGCC ARM32
+        if: steps.cache-gcc32.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$GCC32_DIR"
+          echo "Downloading FoxGCC ARM32..."
+          curl -Lo fox-gcc32.tar.zst \
+            "https://github.com/FoxMiko-Labs/Fox-GCC/releases/download/v17.0-20260822/FoxGCC-17-arm-20260822.tar.zst"
+          tar -I zstd -xf fox-gcc32.tar.zst -C "$GCC32_DIR"
+          rm -f fox-gcc32.tar.zst
+          echo "FoxGCC32 bin contents:"
+          find "$GCC32_DIR" -maxdepth 3 -type d
+          ls "$GCC32_DIR/bin/" | head -10
+
+      # -------------------------------------------------------
+      # ccache
+      # -------------------------------------------------------
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ github.ref_name }}-
+            ccache-
+
+      - name: Configure ccache
+        run: |
+          sudo apt-get install -y ccache
+          ccache --max-size=5G
+          ccache --zero-stats
+
+      # -------------------------------------------------------
+      # Kernel build
+      # -------------------------------------------------------
+      - name: Build kernel
+        run: |
+          chmod +x buildci.sh
+          bash buildci.sh
+        env:
+          CLANG_DIR: ${{ env.CLANG_DIR }}
+          GCC32_DIR: ${{ env.GCC32_DIR }}
+
+      # -------------------------------------------------------
+      # AnyKernel3 packaging
+      # -------------------------------------------------------
+      - name: Clone AnyKernel3
+        run: |
+          git clone --depth=1 \
+            https://github.com/Michikoextv2/AnyKernel3-miatoll.git -b miatoll \
+            "$AK3_DIR"
+
+      - name: Package kernel into flashable zip
+        run: |
+          DATE_TAG=$(TZ=Asia/Jakarta date +%d%m%Y)
+          ZIP_NAME="Michiko-Kernel-${DATE_TAG}.zip"
+          echo "ZIP_NAME=${ZIP_NAME}" >> "$GITHUB_ENV"
+          echo "DATE_TAG=${DATE_TAG}" >> "$GITHUB_ENV"
+
+          cp "$KERNEL_DIR/out/arch/arm64/boot/Image.gz" "$AK3_DIR/" 2>/dev/null || \
+            echo "WARNING: Image.gz not found"
+          cp "$KERNEL_DIR/out/arch/arm64/boot/dtb.img"  "$AK3_DIR/" 2>/dev/null || \
+            echo "WARNING: dtb.img not found"
+          cp "$KERNEL_DIR/out/arch/arm64/boot/dtbo.img" "$AK3_DIR/" 2>/dev/null || \
+            echo "WARNING: dtbo.img not found"
+
+          cd "$AK3_DIR"
+          zip -r9 "$KERNEL_DIR/${ZIP_NAME}" . \
+            -x "*.git*" -x "README.md" -x "*.github*"
+          echo "Packaged: ${ZIP_NAME}"
+
+      # -------------------------------------------------------
+      # Release notes
+      # -------------------------------------------------------
+      - name: Generate release notes
+        run: |
+          {
+            echo "## Michiko Kernel — Build $(TZ=Asia/Jakarta date '+%d %B %Y')"
+            echo ""
+            echo "### Last 5 Commits"
+            echo ""
+            git log -5 --pretty=format:"- \`%h\` %s (%an)" --no-merges
+            echo ""
+            echo ""
+            echo "### Build Info"
+            echo "- Branch: \`lineage-23.2\`"
+            echo "- Runner: \`ubuntu-24.04\`"
+            echo "- Clang: FoxeClang v24.0-20260822"
+            echo "- GCC ARM32: FoxGCC v17.0-20260822"
+            echo "- Defconfig: \`vendor/xiaomi/miatoll_defconfig\`"
+            echo "- Commit: \`${{ github.sha }}\`"
+          } > release_notes.md
+          cat release_notes.md
+
+      # -------------------------------------------------------
+      # Upload artifact
+      # -------------------------------------------------------
+      - name: Upload kernel zip as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIP_NAME }}
+          path: ${{ env.ZIP_NAME }}
+          retention-days: 7
+
+      # -------------------------------------------------------
+      # GitHub Release — langsung di repo utama Michikoextv2
+      # pakai GITHUB_TOKEN bawaan, tidak perlu PAT untuk release
+      # -------------------------------------------------------
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag || format('v{0}', env.DATE_TAG) }}
+          name: "Michiko-Kernel ${{ env.DATE_TAG }}"
+          body_path: release_notes.md
+          files: ${{ env.ZIP_NAME }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # -------------------------------------------------------
+      # ccache stats
+      # -------------------------------------------------------
+      - name: Show ccache stats
+        if: always()
+        run: ccache --show-stats
