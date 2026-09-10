@@ -1,6 +1,6 @@
 # ==============================================================================
 # Michiko Kernel - Automated Build Workflow
-# Target    : Redmi Note 9 Pro ( miatoll )
+# Target    : Poco X3 NFC (surya/karna)
 # Branch    : lineage-23.2
 # Runner    : ubuntu-24.04
 # Toolchain : FoxeClang v24.0 + FoxGCC ARM32 v17.0
@@ -41,7 +41,7 @@ defaults:
 
 jobs:
   build:
-    name: Build Kernel
+    name: Build Kernel - surya - lineage-23.2
     runs-on: ubuntu-24.04
     timeout-minutes: 120
 
@@ -304,29 +304,51 @@ jobs:
 
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${RELEASE_TAG}"
 
-          # printf -v stores into a variable; double-quote format string so
-          # bash expands ${vars} before printf sees it, giving real newlines.
-          printf -v CAPTION "Michiko Kernel - Build %s\nDevice  : %s\nSize    : %s\nRelease : %s" \
-            "${DATE_TAG}" "${TARGET_DEVICE}" "${ZIP_SIZE}" "${RELEASE_URL}"
+          # Use Python3 to send the document.
+          # curl -F cannot reliably pass multiline captions to Telegram
+          # (newlines inside multipart field values trigger HTTP 400).
+          # Python's requests library encodes multipart correctly.
+          python3 - <<PYEOF
+          import os, sys, requests
 
-          HTTP_CODE=$(curl -fSL \
-            --retry 3 \
-            --retry-delay 5 \
-            -o /tmp/tg_response.json \
-            -w "%{http_code}" \
-            -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendDocument" \
-            -F "chat_id=${TG_CHAT_ID}" \
-            -F "message_thread_id=${TG_THREAD_ID}" \
-            -F "document=@${ZIP_PATH}" \
-            -F "caption=${CAPTION}")
+          token    = os.environ["TG_BOT_TOKEN"]
+          chat_id  = os.environ["TG_CHAT_ID"]
+          thread_id = os.environ["TG_THREAD_ID"]
+          zip_path  = os.environ["ZIP_PATH"]
 
-          echo "HTTP status : ${HTTP_CODE}"
-          jq . /tmp/tg_response.json 2>/dev/null || cat /tmp/tg_response.json
+          caption = (
+              "Michiko Kernel - Build {DATE_TAG}\n"
+              "Device  : {TARGET_DEVICE}\n"
+              "Size    : {ZIP_SIZE}\n"
+              "Release : {RELEASE_URL}"
+          ).format(
+              DATE_TAG      = os.environ["DATE_TAG"],
+              TARGET_DEVICE = os.environ["TARGET_DEVICE"],
+              ZIP_SIZE      = os.environ["ZIP_SIZE"],
+              RELEASE_URL   = "${RELEASE_URL}",
+          )
 
-          if [[ "$HTTP_CODE" != "200" ]]; then
-            echo "::error::Telegram API returned HTTP ${HTTP_CODE}"
-            exit 1
-          fi
+          url = f"https://api.telegram.org/bot{token}/sendDocument"
+
+          with open(zip_path, "rb") as f:
+              resp = requests.post(
+                  url,
+                  data={
+                      "chat_id"           : chat_id,
+                      "message_thread_id" : thread_id,
+                      "caption"           : caption,
+                  },
+                  files={"document": (os.path.basename(zip_path), f, "application/zip")},
+                  timeout=300,
+              )
+
+          print(f"HTTP status : {resp.status_code}")
+          print(resp.text)
+
+          if resp.status_code != 200:
+              print(f"::error::Telegram API returned HTTP {resp.status_code}", file=sys.stderr)
+              sys.exit(1)
+          PYEOF
 
       # --------------------------------------------------------------------
       # 15. Show ccache stats
