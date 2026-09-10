@@ -1,6 +1,6 @@
 # ==============================================================================
 # Michiko Kernel - Automated Build Workflow
-# Target    : Redmi Note 9 Pro (miatoll)
+# Target    : Redmi Note 9 Pro ( miatoll )
 # Branch    : lineage-23.2
 # Runner    : ubuntu-24.04
 # Toolchain : FoxeClang v24.0 + FoxGCC ARM32 v17.0
@@ -41,7 +41,7 @@ defaults:
 
 jobs:
   build:
-    name: Build Kernel - surya - lineage-23.2
+    name: Build Kernel
     runs-on: ubuntu-24.04
     timeout-minutes: 120
 
@@ -51,15 +51,15 @@ jobs:
     env:
       ARCH: arm64
       SUBARCH: arm64
-      KBUILD_BUILD_HOST: xyz
-      KBUILD_BUILD_USER: standalone
+      KBUILD_BUILD_HOST: github-ci
+      KBUILD_BUILD_USER: michiko
       USE_CCACHE: "1"
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CLANG_DIR: ${{ github.workspace }}/toolchain/clang
       GCC32_DIR: ${{ github.workspace }}/toolchain/gcc32
       AK3_DIR: ${{ github.workspace }}/AnyKernel3
       KERNEL_DIR: ${{ github.workspace }}
-      KERNEL_NAME: SuperPotato
+      KERNEL_NAME: Michiko-Kernel
       TARGET_DEVICE: "Poco X3 NFC (surya/karna)"
       DEFCONFIG: vendor/xiaomi/miatoll_defconfig
       TG_CHAT_ID: "-1003988216382"
@@ -304,11 +304,10 @@ jobs:
 
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${RELEASE_TAG}"
 
-          CAPTION=$(printf '%s\n%s\n%s\n%s' \
-            "Michiko Kernel - Build ${DATE_TAG}" \
-            "Device  : ${TARGET_DEVICE}" \
-            "Size    : ${ZIP_SIZE}" \
-            "Release : ${RELEASE_URL}")
+          # printf -v stores into a variable; double-quote format string so
+          # bash expands ${vars} before printf sees it, giving real newlines.
+          printf -v CAPTION "Michiko Kernel - Build %s\nDevice  : %s\nSize    : %s\nRelease : %s" \
+            "${DATE_TAG}" "${TARGET_DEVICE}" "${ZIP_SIZE}" "${RELEASE_URL}"
 
           HTTP_CODE=$(curl -fSL \
             --retry 3 \
