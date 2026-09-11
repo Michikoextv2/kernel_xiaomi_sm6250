@@ -251,7 +251,7 @@ jobs:
         run: |
           git clone --depth=1 \
             https://github.com/Michikoextv2/AnyKernel3-miatoll.git \
-            -b miatoll "$AK3_DIR"
+            -b staging "$AK3_DIR"
 
       # --------------------------------------------------------------------
       # 11. Package kernel ZIP
