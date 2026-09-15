@@ -114,17 +114,6 @@ jobs:
             flex git jq libelf-dev libssl-dev lld llvm make \
             python3 python3-requests unzip xz-utils zstd ccache lz4
 
-       
-      # --------------------------------------------------------------------
-      # 2.5. Setup KernelSU-Next
-      # --------------------------------------------------------------------
-      - name: Setup KernelSU-Next
-        run: |
-          cd "$KERNEL_DIR"
-          curl -LSs "https://raw.githubusercontent.com/manipvlator/KernelSU-Next/stable/kernel/setup.sh" \
-            | bash -s syscall
-          echo "KSU Next version : $(cat KernelSU/kernel/Makefile | grep -m1 'KERNELSU_VERSION' | cut -d= -f2 | tr -d ' ')"
-          
       # --------------------------------------------------------------------
       # 3. Restore FoxeClang cache
       # --------------------------------------------------------------------
