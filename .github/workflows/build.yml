@@ -231,9 +231,15 @@ jobs:
             exit 1
           fi
 
+          # Catat waktu mulai build
+          echo "BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
+
           chmod +x "$KERNEL_DIR/buildci.sh"
           cd "$KERNEL_DIR"
           bash buildci.sh
+
+          # Catat waktu selesai build (hanya kompilasi, sebelum packaging)
+          echo "BUILD_END=$(date +%s)" >> "$GITHUB_ENV"
 
       # --------------------------------------------------------------------
       # 9. Verify kernel output
