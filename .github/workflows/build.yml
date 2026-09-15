@@ -6,7 +6,7 @@
 # Toolchain : FoxeClang v23.0 + FoxGCC ARM32 v17.0
 # ==============================================================================
 
-name: Michiko Kernel Build
+name: SuperPotato Kernel
 
 on:
   push:
@@ -52,8 +52,8 @@ jobs:
       TZ: Asia/Jakarta
       ARCH: arm64
       SUBARCH: arm64
-      KBUILD_BUILD_HOST: standalone
-      KBUILD_BUILD_USER: xyz
+      KBUILD_BUILD_HOST: xyz
+      KBUILD_BUILD_USER: standalone
       USE_CCACHE: "1"
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CLANG_DIR: ${{ github.workspace }}/toolchain/clang
@@ -101,7 +101,7 @@ jobs:
       - name: Setup KernelSU
         run: |
           cd "$KERNEL_DIR"
-          curl -LSs "https://raw.githubusercontent.com/manipvlator/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
+          curl -LSs "https://raw.githubusercontent.com/manipvlator/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s mmain
           
       # --------------------------------------------------------------------
       # 2. Install build dependencies
@@ -111,8 +111,9 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
             bc bison build-essential ca-certificates cpio curl \
-            flex git jq libelf-dev libssl-dev lld llvm make \
-            python3 python3-requests unzip xz-utils zstd ccache lz4
+            flex git jq libelf-dev libssl-dev \
+            python3 python3-requests unzip xz-utils zstd ccache lz4 \
+            rsync flex dwarves make libdw-dev pkg-config device-tree-compiler
 
       # --------------------------------------------------------------------
       # 3. Restore FoxeClang cache
@@ -180,7 +181,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ccache-miatoll-${{ github.sha }}
+          key: ccache-surya-${{ github.sha }}
           restore-keys: |
             ccache-miatoll-
             ccache-
@@ -201,7 +202,6 @@ jobs:
           if [[ -n "$CUSTOM_TAG" ]]; then
             RELEASE_TAG="$CUSTOM_TAG"
           else
-            # Auto tag: hanya angka tanggal, contoh: 11092026
             RELEASE_TAG="$DATE_TAG"
           fi
 
@@ -276,7 +276,7 @@ jobs:
           for img in Image.gz dtb.img dtbo.img; do
             src="$KERNEL_DIR/out/arch/arm64/boot/$img"
             if [[ -f "$src" ]]; then
-              cp "$src" "$AK3_DIR/"
+              cp "$src" "$AK3_DIR"
               echo "Copied : $img"
             else
               echo "Skip   : $img (not found)"
@@ -303,6 +303,13 @@ jobs:
           COMMIT_LOG=$(git -C "$KERNEL_DIR" log -5 \
             --pretty=format:"- \`%h\` %s (%an)" --no-merges)
 
+          # Hitung durasi build untuk release notes
+          BUILD_DURATION_SEC=$(( BUILD_END - BUILD_START ))
+          BUILD_DURATION="${BUILD_DURATION_SEC}s"
+          if (( BUILD_DURATION_SEC >= 60 )); then
+            BUILD_DURATION="$(( BUILD_DURATION_SEC / 60 ))m $(( BUILD_DURATION_SEC % 60 ))s"
+          fi
+
           cat > "${GITHUB_WORKSPACE}/release_notes.md" << EOF
           ## SuperPotato-${DATE_TAG}
 
@@ -322,11 +329,15 @@ jobs:
           | Clang     | FoxeClang v23.0-20260822 |
           | GCC ARM32 | FoxGCC v17.0-20260822    |
           | Defconfig | \`${DEFCONFIG}\`         |
+          | Duration  | ${BUILD_DURATION}        |
           | Size      | ${ZIP_SIZE}              |
 
           ---
           Built by [Michikoextv2](https://github.com/Michikoextv2)
           EOF
+
+          # Export Telegram
+          echo "BUILD_DURATION=${BUILD_DURATION}" >> "$GITHUB_ENV"
 
       # --------------------------------------------------------------------
       # 13. Upload kernel ZIP as artifact
