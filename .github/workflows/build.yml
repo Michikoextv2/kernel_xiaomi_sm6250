@@ -89,6 +89,19 @@ jobs:
           fetch-depth: 5
           path: kernel-source
 
+      # --------------------------------------------------------------
+      # 1.5 Checkout Misc
+      # --------------------------------------------------------------
+      - name: Implant NoMount
+        run: |
+          cd "$KERNEL_DIR"
+          curl https://raw.githubusercontent.com/maxsteeel/nomount/refs/heads/dev/kernel/setup.sh | bash -
+
+      - name: Setup KernelSU
+        run: |
+          cd "$KERNEL_DIR"
+          curl -LSs "https://raw.githubusercontent.com/manipvlator/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s mmain
+          
       # --------------------------------------------------------------------
       # 2. Install build dependencies
       # --------------------------------------------------------------------
@@ -364,13 +377,17 @@ jobs:
           zip_path  = os.environ["ZIP_PATH"]
 
           caption = (
-              "SuperPotato-{DATE_TAG}\n"
-              "Device  : {TARGET_DEVICE}\n"
-              "Release : {RELEASE_URL}"
+              "✅ Build Completed\n"
+              "\n"
+              "Device   : {TARGET_DEVICE}\n"
+              "Duration : {BUILD_DURATION}\n"
+              "Size     : {ZIP_SIZE}\n"
+              "Release  : {RELEASE_URL}"
           ).format(
-              DATE_TAG      = os.environ["DATE_TAG"],
-              TARGET_DEVICE = os.environ["TARGET_DEVICE"],
-              RELEASE_URL   = os.environ["RELEASE_URL"],
+              TARGET_DEVICE  = os.environ["TARGET_DEVICE"],
+              BUILD_DURATION = os.environ["BUILD_DURATION"],
+              ZIP_SIZE       = os.environ["ZIP_SIZE"],
+              RELEASE_URL    = os.environ["RELEASE_URL"],
           )
 
           url = f"https://api.telegram.org/bot{token}/sendDocument"
