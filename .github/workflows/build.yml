@@ -283,6 +283,16 @@ jobs:
             fi
           done
 
+          # Copy DTB ke AnyKernel3/dtb/
+          DTB_SRC="$KERNEL_DIR/out/arch/arm64/boot/dts/qcom/cust-atoll-ab.dtb"
+          DTB_DST="$AK3_DIR/dtb"
+          if [[ -f "$DTB_SRC" ]]; then
+            cp "$DTB_SRC" "$DTB_DST/"
+            echo "Copied : cust-atoll-ab.dtb -> AnyKernel3/dtb/"
+          else
+            echo "::warning::DTB not found: $DTB_SRC"
+          fi
+
           (
             cd "$AK3_DIR"
             zip -r9 "$ZIP_PATH" . \
