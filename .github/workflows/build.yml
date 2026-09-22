@@ -3,7 +3,7 @@
 # Target    : Redmi Note 9 Pro (miatoll)
 # Branch    : lineage-23.2
 # Runner    : ubuntu-24.04
-# Toolchain : FoxeClang v23.0 + FoxGCC ARM32 v17.0
+# Toolchain : FoxeReborn v24.0 + FoxGCC ARM32 v17.0
 # ==============================================================================
 
 name: SuperPotato Kernel
@@ -130,7 +130,7 @@ jobs:
         run: |
           mkdir -p "$CLANG_DIR"
           curl -fSL --retry 3 -o foxe-clang.tar.zst \
-            "https://github.com/FoxMiko-Labs/FoxeClang/releases/download/v23.0-20260822/FoxeClang-23.0-20260822.tar.zst"
+            "https://github.com/FoxMiko-Labs/FoxeClang/releases/download/v24.0-20260822/FoxeClang-24.0-20260822.tar.zst"
           tar --use-compress-program=zstd -xf foxe-clang.tar.zst \
             -C "$CLANG_DIR" --strip-components=1
           rm -f foxe-clang.tar.zst
@@ -336,7 +336,7 @@ jobs:
           |-----------|--------------------------|
           | Branch    | \`lineage-23.2\`         |
           | Runner    | \`ubuntu-24.04\`         |
-          | Clang     | FoxeClang v23.0-20260822 |
+          | Clang     | FoxReborn v24.0-20260822 |
           | GCC ARM32 | FoxGCC v17.0-20260822    |
           | Defconfig | \`${DEFCONFIG}\`         |
           | Duration  | ${BUILD_DURATION}        |
@@ -406,7 +406,7 @@ jobs:
               "Root Manager Support\n"
               "This kernel ships with built-in Multi-manager support.\n"
               "Only one root manager needs to be installed at a time.\n"
-              "Supported: KernelSU, KSU-Next, ResukiSU, MamboSU, other\n"
+              "Supported: KernelSU, KSU-Next, ResukiSU, MamboSU, & Other\n"
               "\n"
               "Release  : {RELEASE_URL}"
           ).format(
