@@ -123,7 +123,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.CLANG_DIR }}
-          key: foxe-clang-v23.0-20260822
+          key: foxe-clang-v24.0-20260822
 
       - name: Download and extract FoxeClang
         if: steps.cache-clang.outputs.cache-hit != 'true'
