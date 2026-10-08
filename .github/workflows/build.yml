@@ -1,7 +1,7 @@
 # ==============================================================================
 # Michiko Kernel - Automated Build Workflow
 # Target    : Redmi Note 9 Pro (miatoll)
-# Branch    : lineage-23.2
+# Branch    : lineage-24.0
 # Runner    : ubuntu-24.04
 # Toolchain : FoxeReborn v24.0 + FoxGCC ARM32 v17.0
 # ==============================================================================
@@ -62,7 +62,7 @@ jobs:
       KERNEL_DIR: ${{ github.workspace }}/kernel-source
       KERNEL_NAME: SuperPotato
       TARGET_DEVICE: "Redmi Note 9 Pro (miatoll)"
-      DEFCONFIG: vendor/xiaomi/miatoll_defconfig
+      DEFCONFIG: miatoll_defconfig
       TG_CHAT_ID: "-1003641667794"
       TG_THREAD_ID: "4123"
 
@@ -85,7 +85,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: FoxMiko-Labs/kernel_xiaomi_sm6250
-          ref: lineage-23.2
+          ref: lineage-24.0
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 5
           path: kernel-source
@@ -334,7 +334,7 @@ jobs:
 
           | Key       | Value                    |
           |-----------|--------------------------|
-          | Branch    | \`lineage-23.2\`         |
+          | Branch    | \`lineage-24.0\`         |
           | Runner    | \`ubuntu-24.04\`         |
           | Clang     | FoxReborn v24.0-20260822 |
           | GCC ARM32 | FoxGCC v17.0-20260822    |
