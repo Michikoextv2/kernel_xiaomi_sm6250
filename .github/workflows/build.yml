@@ -403,11 +403,10 @@ jobs:
               "Android Support\n"
               "Compatible with Android 11-17.\n"
               "\n"
-              "Root Manager Support\n"
               "This kernel ships with built-in Multi-manager support.\n"
               "Only one root manager needs to be installed at a time.\n"
-              "Supported: KernelSU, KSU-Next, ResukiSU, MamboSU, & Other\n"
               "\n"
+              "Now this kernel LTS - because i blind build\n"
               "Release  : {RELEASE_URL}"
           ).format(
               TARGET_DEVICE  = os.environ["TARGET_DEVICE"],
