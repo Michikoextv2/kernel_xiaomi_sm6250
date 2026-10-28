@@ -352,7 +352,7 @@ jobs:
             fi
           done
 
-         # Copy DTB ke AnyKernel3/dtb/
+          # Copy DTB ke AnyKernel3/dtb/
           DTB_SRC="$KERNEL_DIR/out/arch/arm64/boot/dts/qcom/cust-atoll-ab.dtb"
           DTB_DST="$AK3_DIR/dtb"
           if [[ -f "$DTB_SRC" ]]; then
